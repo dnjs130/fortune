@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>오늘의 운세</title>
+  <style>
+    :root{--bg:#0f172a;--card:#0b1220;--accent:#6ee7b7;--muted:#94a3b8}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,'Noto Sans KR',"Helvetica Neue",Arial;
+      background:linear-gradient(180deg,#071029 0%, #052238 100%);color:#e6eef8;display:flex;align-items:center;justify-content:center;padding:24px
+    }
+    .app{width:100%;max-width:720px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));border-radius:18px;padding:22px;box-shadow:0 8px 30px rgba(2,6,23,0.7)}
+    header{display:flex;align-items:center;gap:14px}
+    .logo{width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#60a5fa);display:flex;align-items:center;justify-content:center;font-weight:700;color:#04211a}
+    h1{margin:0;font-size:1.2rem}
+    p.lead{margin:6px 0 0;color:var(--muted);font-size:0.95rem}
+
+    .controls{display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap}
+    input[type=text]{flex:1;min-width:160px;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    button{padding:10px 12px;border-radius:10px;border:0;background:linear-gradient(90deg,var(--accent),#60a5fa);color:#04211a;font-weight:600;cursor:pointer}
+    .small{padding:8px 10px;font-size:0.9rem}
+
+    .category-buttons{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+    .category-buttons button{background:rgba(255,255,255,0.06);color:#e6eef8;border:1px solid rgba(255,255,255,0.05)}
+    .category-buttons button.active{background:linear-gradient(90deg,var(--accent),#60a5fa);color:#04211a;font-weight:700}
+
+    .result{margin-top:18px;padding:16px;border-radius:12px;background:rgba(255,255,255,0.02);min-height:120px}
+    .result h3{margin:0;font-size:1rem}
+    .fortune{margin-top:8px;font-size:0.95rem;line-height:1.35}
+
+    footer{display:flex;gap:8px;align-items:center;margin-top:16px;justify-content:space-between}
+    .muted{color:var(--muted);font-size:0.9rem}
+
+    .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:30px;background:#02121a;padding:10px 14px;border-radius:10px;color:#9ee7c9;border:1px solid rgba(255,255,255,0.04);display:none}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <header>
+        <div class="logo">운세</div>
+        <div>
+          <h1>오늘의 운세</h1>
+          <p class="lead">이름을 입력하고 확인하고 싶은 카테고리를 선택하세요.</p>
+        </div>
+      </header>
+
+      <div class="controls">
+        <input id="nameInput" type="text" placeholder="이름 (선택)" maxlength="20" />
+        <button id="randomBtn" class="small">무작위</button>
+      </div>
+
+      <div class="category-buttons" id="categoryButtons"></div>
+
+      <div class="result" id="result">
+        <div class="muted">카테고리를 선택하세요.</div>
+      </div>
+
+      <footer>
+        <div class="muted" id="dateLabel">--</div>
+      </footer>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">복사됨</div>
+
+  <script>
+    const categories=[
+      {key:'overall',label:'총운'},
+      {key:'love',label:'연애'},
+      {key:'money',label:'금전'},
+      {key:'work',label:'학업/직장'},
+      {key:'health',label:'건강'}
+    ];
+    const levels=['대길','길함','보통','주의','흉'];
+    const lines={
+      overall:['새로운 기회가 찾아옵니다. 작은 결심이 큰 변화를 만듭니다.','조금 느려도 꾸준함이 이득으로 이어집니다.','결정은 서두르지 마세요. 정보가 더 필요합니다.','생각지도 못한 의외의 일이 생길 수 있으니 유연하게 대응하세요.','지금은 휴식이 더 필요합니다. 무리하지 마세요.'],
+      love:['관계에 솔직함이 신뢰를 만듭니다.','작은 이벤트가 큰 행복으로 돌아옵니다.','한 발 물러서는 것이 상황을 좋게 만듭니다.','대화가 부족합니다. 진심을 전해보세요.','혼자만의 시간이 필요할 수 있습니다. 감정 정리하세요.'],
+      money:['작은 절약이 큰 자산으로 이어집니다.','투자보다 안전이 우선입니다. 급한 결정은 피하세요.','예상치 못한 지출이 생길 수 있으니 비상금을 확보하세요.','수입보다 지출 관리에 신경쓰세요.','지금은 소비를 줄이고 계획을 세우는 것이 좋습니다.'],
+      work:['집중력이 올라옵니다. 중요한 일에 몰두하세요.','협업이 성과로 이어집니다. 도움을 요청하세요.','계획을 정리하면 풀릴 문제입니다.','작은 실수가 생길 수 있으니 확인 습관을 가지세요.','과로 주의. 휴식과 수면을 챙기세요.'],
+      health:['활력이 좋아지는 날입니다. 가벼운 운동을 권장합니다.','규칙적인 식사와 수면이 컨디션을 좌우합니다.','스트레스 관리가 필요합니다. 짧은 산책을 해보세요.','과로와 무리한 운동을 피하세요.','특별히 몸 상태를 살피고 이상 있으면 진료를 권합니다.']
+    };
+
+    const nameInput=document.getElementById('nameInput');
+    const randomBtn=document.getElementById('randomBtn');
+    const categoryButtons=document.getElementById('categoryButtons');
+    const result=document.getElementById('result');
+    const dateLabel=document.getElementById('dateLabel');
+    const toast=document.getElementById('toast');
+
+    function hashString(s){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h=(h^s.charCodeAt(i))*16777619>>>0;}return h>>>0;}
+    function makeRng(seed){let x=seed||123456789;return function(){x^=x<<13;x^=x>>>17;x^=x<<5;x=x>>>0;return(x>>>0)/4294967296;}}
+
+    function todayString(){const d=new Date();return d.getFullYear()+"-"+(String(d.getMonth()+1).padStart(2,'0'))+"-"+String(d.getDate()).padStart(2,'0');}
+    function buildSeed(name,extra){const t=todayString();return hashString((name||'')+'|'+t+'|'+(extra||'0'));}
+
+    function generateSingleFortune(name,catKey){
+      const seed=buildSeed(name,catKey);
+      const rng=makeRng(seed);
+      const idx=Math.floor(rng()*lines[catKey].length);
+      const levelIdx=Math.floor(rng()*levels.length);
+      return {text:lines[catKey][idx],level:levels[levelIdx]};
+    }
+
+    function showToast(t){toast.textContent=t;toast.style.display='block';setTimeout(()=>toast.style.display='none',1400);}
+
+    function renderCategoryButtons(){
+      categoryButtons.innerHTML='';
+      categories.forEach(cat=>{
+        const btn=document.createElement('button');
+        btn.textContent=cat.label;
+        btn.addEventListener('click',()=>{
+          document.querySelectorAll('.category-buttons button').forEach(b=>b.classList.remove('active'));
+          btn.classList.add('active');
+          const name=nameInput.value.trim();
+          const fortune=generateSingleFortune(name,cat.key);
+          renderFortune(cat,fortune,name);
+        });
+        categoryButtons.appendChild(btn);
+      });
+    }
+
+    function renderFortune(cat,fortune,name){
+      result.innerHTML=`<h3>${cat.label} · ${fortune.level}</h3><div class="fortune">${fortune.text}</div>`;
+      dateLabel.textContent=(name?name+'님, ':'')+todayString();
+    }
+
+    randomBtn.addEventListener('click',()=>{
+      const fCat=categories[Math.floor(Math.random()*categories.length)];
+      const fortune=generateSingleFortune('anonymous',fCat.key);
+      renderFortune(fCat,fortune,'');
+    });
+
+    renderCategoryButtons();
+  </script>
+</body>
+</html>
